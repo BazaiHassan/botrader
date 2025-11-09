@@ -51,6 +51,9 @@ texts = {
         'ai_header': "🤖 <b>AI Analysis Report</b>\n",
         'analysis_section': "\n📊 <b>Market Analysis:</b>\n{}",
         'recommendation_section': "\n\n💡 <b>Trading Recommendation:</b>\n🔹 Action: <b>{}</b>\n🔹 Target Price: <b>${:.2f}</b>\n🔹 Target Date: <b>{}</b>",
+        'donation_thanks': "⭐ Thank you for your support!\n\n💝 Your donation helps us keep this bot running and improving.\n\nYou can support us with Telegram Stars:",
+        'donation_success': "🎉 Thank you for your generous donation!\n\n💖 Your support means the world to us!",
+        'donation_cancelled': "No problem! You can donate anytime by using /donate command.",
     },
     'fa': {
         'select_language': "لطفاً زبان خود را انتخاب کنید:",
@@ -69,6 +72,9 @@ texts = {
         'ai_header': "🤖 <b>گزارش تحلیل هوش مصنوعی</b>\n",
         'analysis_section': "\n📊 <b>تحلیل بازار:</b>\n{}",
         'recommendation_section': "\n\n💡 <b>توصیه معاملاتی:</b>\n🔹 اقدام: <b>{}</b>\n🔹 قیمت هدف: <b>${:.2f}</b>\n🔹 تاریخ هدف: <b>{}</b>",
+        'donation_thanks': "⭐ از حمایت شما متشکریم!\n\n💝 کمک مالی شما به ما کمک می‌کند این ربات را فعال و بهتر نگه داریم.\n\nمی‌توانید با Telegram Stars از ما حمایت کنید:",
+        'donation_success': "🎉 از کمک سخاوتمندانه شما متشکریم!\n\n💖 حمایت شما برای ما بسیار ارزشمند است!",
+        'donation_cancelled': "مشکلی نیست! می‌توانید هر زمان با دستور /donate کمک کنید.",
     },
     'ar': {
         'select_language': "يرجى اختيار لغتك:",
@@ -87,6 +93,9 @@ texts = {
         'ai_header': "🤖 <b>تقرير تحليل الذكاء الاصطناعي</b>\n",
         'analysis_section': "\n📊 <b>تحليل السوق:</b>\n{}",
         'recommendation_section': "\n\n💡 <b>التوصية التجارية:</b>\n🔹 الإجراء: <b>{}</b>\n🔹 السعر المستهدف: <b>${:.2f}</b>\n🔹 التاريخ المستهدف: <b>{}</b>",
+        'donation_thanks': "⭐ شكرا لدعمك!\n\n💝 تبرعك يساعدنا في الحفاظ على هذا البوت وتحسينه.\n\nيمكنك دعمنا بنجوم تيليجرام:",
+        'donation_success': "🎉 شكرا لتبرعك السخي!\n\n💖 دعمك يعني الكثير بالنسبة لنا!",
+        'donation_cancelled': "لا مشكلة! يمكنك التبرع في أي وقت باستخدام الأمر /donate.",
     }
 }
 
@@ -343,7 +352,53 @@ def get_crypto_chart(coin_full_name, timeframe):
     
     return chart_buf
 
+def create_donation_keyboard():
+    """Create inline keyboard with donation options using Telegram Stars"""
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    
+    # Donation buttons with different star amounts
+    button_1 = types.InlineKeyboardButton(text="⭐ 1 Star", callback_data="donate_1")
+    button_5 = types.InlineKeyboardButton(text="⭐ 5 Stars", callback_data="donate_5")
+    button_10 = types.InlineKeyboardButton(text="⭐ 10 Stars", callback_data="donate_10")
+    button_25 = types.InlineKeyboardButton(text="⭐ 25 Stars", callback_data="donate_25")
+    button_50 = types.InlineKeyboardButton(text="⭐ 50 Stars", callback_data="donate_50")
+    button_100 = types.InlineKeyboardButton(text="⭐ 100 Stars", callback_data="donate_100")
+    
+    keyboard.add(button_1, button_5)
+    keyboard.add(button_10, button_25)
+    keyboard.add(button_50, button_100)
+    
+    return keyboard
+
+def create_main_menu_keyboard(lang='en'):
+    """Create main menu keyboard with donation button"""
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    
+    coins_button = types.InlineKeyboardButton(
+        text="📊 View Coins" if lang == 'en' else "📊 مشاهده کوین‌ها" if lang == 'fa' else "📊 عرض العملات",
+        callback_data="show_coins"
+    )
+    donate_button = types.InlineKeyboardButton(
+        text="⭐ Donate" if lang == 'en' else "⭐ حمایت مالی" if lang == 'fa' else "⭐ تبرع",
+        callback_data="show_donation"
+    )
+    
+    keyboard.add(coins_button, donate_button)
+    
+    return keyboard
+
 def create_crypto_keyboard():
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    
+    for i in range(0, len(CRYPTO_COINS), 2):
+        row = []
+        for j in range(i, min(i + 2, len(CRYPTO_COINS))):
+            coin = CRYPTO_COINS[j]
+            button = types.InlineKeyboardButton(text=coin, callback_data=f"coin_{j}")
+            row.append(button)
+        keyboard.add(*row)
+    
+    return keyboard
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     
     for i in range(0, len(CRYPTO_COINS), 2):
@@ -419,6 +474,17 @@ def send_welcome(message):
     chat_id = message.chat.id
     lang = user_languages.get(chat_id, 'en')
     bot.reply_to(message, texts[lang]['select_language'], reply_markup=create_language_keyboard())
+
+@bot.message_handler(commands=['donate'])
+def send_donation(message):
+    chat_id = message.chat.id
+    lang = user_languages.get(chat_id, 'en')
+    bot.reply_to(
+        message,
+        texts[lang]['donation_thanks'],
+        reply_markup=create_donation_keyboard(),
+        parse_mode='HTML'
+    )
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -637,6 +703,13 @@ def callback_query(call):
                 )
                 keyboard.add(another_coin_button)
                 
+                # Add donation button
+                donate_button = types.InlineKeyboardButton(
+                    text="⭐ Support Us" if lang == 'en' else "⭐ حمایت از ما" if lang == 'fa' else "⭐ ادعمنا",
+                    callback_data="show_donation"
+                )
+                keyboard.add(donate_button)
+                
             except Exception as parse_e:
                 print(f"JSON parse error: {parse_e}")
                 analysis_text = f"<b>AI Analysis:</b>\n\n{response.text}"
@@ -673,6 +746,48 @@ def callback_query(call):
             text=texts[lang]['available_coins'],
             reply_markup=create_crypto_keyboard()
         )
+    
+    elif call.data == "show_donation":
+        bot.edit_message_text(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            text=texts[lang]['donation_thanks'],
+            reply_markup=create_donation_keyboard(),
+            parse_mode='HTML'
+        )
+    
+    elif call.data.startswith("donate_"):
+        # Extract star amount
+        star_amount = int(call.data.split("_")[1])
+        
+        try:
+            # Create invoice for Telegram Stars
+            prices = [types.LabeledPrice(label=f"{star_amount} Telegram Stars", amount=star_amount)]
+            
+            bot.send_invoice(
+                chat_id=call.message.chat.id,
+                title=f"Support Crypto Tracker Bot",
+                description=f"Thank you for supporting our bot with {star_amount} Telegram Stars! Your contribution helps us maintain and improve the service.",
+                invoice_payload=f"donate_{star_amount}_stars",
+                provider_token="",  # Empty for Telegram Stars
+                currency="XTR",  # Telegram Stars currency code
+                prices=prices,
+                start_parameter="donate"
+            )
+            
+            bot.answer_callback_query(
+                call.id,
+                f"⭐ Payment request sent for {star_amount} stars!",
+                show_alert=False
+            )
+            
+        except Exception as e:
+            print(f"Error creating invoice: {e}")
+            bot.answer_callback_query(
+                call.id,
+                "❌ Sorry, there was an error processing your donation request.",
+                show_alert=True
+            )
 
 @bot.message_handler(commands=['coins'])
 def show_coins(message):
@@ -682,6 +797,30 @@ def show_coins(message):
         message, 
         texts[lang]['available_coins'],
         reply_markup=create_crypto_keyboard()
+    )
+
+# Handle successful payment
+@bot.pre_checkout_query_handler(func=lambda query: True)
+def checkout(pre_checkout_query):
+    bot.answer_pre_checkout_query(
+        pre_checkout_query.id,
+        ok=True,
+        error_message="Something went wrong. Please try again later."
+    )
+
+@bot.message_handler(content_types=['successful_payment'])
+def got_payment(message):
+    chat_id = message.chat.id
+    lang = user_languages.get(chat_id, 'en')
+    
+    # Extract star amount from invoice payload
+    payload = message.successful_payment.invoice_payload
+    
+    bot.send_message(
+        chat_id,
+        texts[lang]['donation_success'],
+        reply_markup=create_main_menu_keyboard(lang),
+        parse_mode='HTML'
     )
 
 @bot.message_handler(func=lambda message: True)
